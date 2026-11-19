@@ -1,0 +1,6 @@
+{
+  "name": "THE AETHER ENGINE｜以太資訊引擎",
+  "description": "以維多利亞蒸汽龐克機械風格打造的模組化個人資訊儀表板與待機控制台，支援自由拖曳、縮放、模組替換與本地設定保存。",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

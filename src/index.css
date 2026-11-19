@@ -1,0 +1,142 @@
+@import "tailwindcss";
+@import "react-grid-layout/css/styles.css";
+
+@layer base {
+  :root {
+    --font-display: "Cinzel", "Noto Serif TC", Georgia, serif;
+    --font-sans: "DM Sans", "Noto Sans TC", system-ui, -apple-system, sans-serif;
+    --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+
+    --aether-bg: #0b0c0e;
+    --aether-surface: #15171b;
+    --aether-surface-elevated: #1c1f25;
+    --aether-border: rgba(196, 154, 82, 0.24);
+    --aether-brass: #c49a52;
+    --aether-brass-dim: #8a6a33;
+    --aether-copper: #c97b42;
+    --aether-ivory: #f3ebdd;
+    --aether-gold: #d6be91;
+    --aether-pewter: #948d80;
+  }
+
+  html,
+  body {
+    font-family: var(--font-sans);
+    background-color: var(--aether-bg);
+    color: var(--aether-ivory);
+    min-height: 100%;
+  }
+}
+
+.font-display {
+  font-family: var(--font-display);
+}
+
+.font-mono-tabular {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Subtle cast-iron plate texture */
+.aether-canvas-bg {
+  background-color: #0b0c0e;
+  background-image:
+    radial-gradient(circle at 50% 0%, rgba(196, 154, 82, 0.05) 0%, transparent 58%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.012) 0%, transparent 100%);
+}
+
+/* Drafting grid shown subtly in Edit Mode */
+.aether-blueprint-grid {
+  background-image:
+    linear-gradient(to right, rgba(196, 154, 82, 0.055) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(196, 154, 82, 0.055) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+/* Slow restrained gear spin */
+@keyframes gearSpinSlow {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes gearSpinReverse {
+  from {
+    transform: rotate(360deg);
+  }
+  to {
+    transform: rotate(0deg);
+  }
+}
+
+.animate-gear-slow {
+  animation: gearSpinSlow 48s linear infinite;
+}
+
+.animate-gear-reverse {
+  animation: gearSpinReverse 36s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-gear-slow,
+  .animate-gear-reverse {
+    animation: none !important;
+  }
+}
+
+/* React Grid Layout Steampunk overrides */
+.react-grid-item.react-grid-placeholder {
+  background: rgba(196, 154, 82, 0.14) !important;
+  border: 1px dashed rgba(196, 154, 82, 0.65) !important;
+  border-radius: 6px;
+  opacity: 1 !important;
+}
+
+.react-grid-item > .react-resizable-handle {
+  width: 24px;
+  height: 24px;
+  opacity: 0.75;
+  z-index: 20;
+  transition: opacity 150ms ease;
+}
+
+.react-grid-item:hover > .react-resizable-handle {
+  opacity: 1;
+}
+
+.react-grid-item > .react-resizable-handle::after {
+  content: "";
+  position: absolute;
+  right: 6px;
+  bottom: 6px;
+  width: 9px;
+  height: 9px;
+  border-right: 2px solid #c49a52;
+  border-bottom: 2px solid #c49a52;
+}
+
+/* Custom thin dark-iron scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0e1013;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #33363d;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #8a6a33;
+}
