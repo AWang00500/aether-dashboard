@@ -1,0 +1,128 @@
+name: Deploy Aether Engine to GitHub Pages
+
+on:
+  push:
+    branches:
+      - main
+  schedule:
+    # Taiwan Time (UTC+8) 06:15 -> 22:15 UTC (morning weather + astro + available stock close)
+    - cron: '15 22 * * *'
+    # Taiwan Time (UTC+8) 15:00 -> 07:00 UTC (TWSE market close + 90d history fully settled + weather)
+    - cron: '0 7 * * *'
+    # Taiwan Time (UTC+8) 18:00 -> 10:00 UTC (evening weather + sunset/next-sunrise + stock re-verify)
+    - cron: '0 10 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build_and_publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout full source repository
+        uses: actions/checkout@v4
+
+      - name: Check required CWA_API_KEY secret
+        env:
+          CWA_API_KEY: ${{ secrets.CWA_API_KEY }}
+        run: |
+          if [ -z "$CWA_API_KEY" ]; then
+            echo "::error::尚未於 GitHub Repository Secrets 設定 CWA_API_KEY，無法更新中央氣象署資料，已中止部署。"
+            exit 1
+          fi
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Setup Bun (matches bun.lock)
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies with frozen bun.lock
+        run: bun install --frozen-lockfile
+
+      - name: Fetch latest CWA & TWSE OpenData snapshots
+        env:
+          CWA_API_KEY: ${{ secrets.CWA_API_KEY }}
+          TWSE_CHART_SYMBOLS: ${{ vars.TWSE_CHART_SYMBOLS }}
+        run: npm run fetch-data
+
+      - name: Verify snapshot freshness and integrity
+        run: npm run verify-data -- --max-age-minutes 45
+
+      - name: Build standalone single-file HTML (SELF/index.html)
+        run: npm run build
+
+      - name: Verify embedded data inside SELF/index.html
+        run: node scripts/verify-snapshot.mjs --html SELF/index.html --max-age-minutes 45
+
+      - name: Publish standalone SELF/index.html to target GitHub Pages repository
+        if: ${{ vars.PAGES_TARGET_REPO != '' }}
+        env:
+          PAGES_DEPLOY_TOKEN: ${{ secrets.PAGES_DEPLOY_TOKEN }}
+          PAGES_TARGET_REPO: ${{ vars.PAGES_TARGET_REPO }}
+          PAGES_TARGET_BRANCH: ${{ vars.PAGES_TARGET_BRANCH }}
+        run: |
+          set -euo pipefail
+          if [ -z "$PAGES_DEPLOY_TOKEN" ]; then
+            echo "::error::已設定 PAGES_TARGET_REPO，但未設定 PAGES_DEPLOY_TOKEN Secret，無法跨 Repository 推送。"
+            exit 1
+          fi
+
+          TARGET_BRANCH="${PAGES_TARGET_BRANCH:-main}"
+          TARGET_DIR="${RUNNER_TEMP}/pages-target"
+          AUTH_B64="$(printf 'x-access-token:%s' "$PAGES_DEPLOY_TOKEN" | base64 -w 0)"
+          echo "::add-mask::${AUTH_B64}"
+          rm -rf "$TARGET_DIR"
+
+          git -c "http.https://github.com/.extraheader=AUTHORIZATION: basic ${AUTH_B64}" \
+            clone --depth 1 --branch "$TARGET_BRANCH" \
+            "https://github.com/${PAGES_TARGET_REPO}.git" \
+            "$TARGET_DIR"
+
+          cp SELF/index.html "$TARGET_DIR/index.html"
+          if [ -f SELF/README.md ]; then
+            cp SELF/README.md "$TARGET_DIR/README.md"
+          fi
+
+          cd "$TARGET_DIR"
+          if [ -z "$(git status --porcelain index.html README.md)" ]; then
+            echo "Standalone index.html and README.md are already up to date."
+            exit 0
+          fi
+
+          TAIWAN_TIME="$(TZ='Asia/Taipei' date '+%Y-%m-%d %H:%M')"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html README.md
+          git commit -m "chore: update standalone dashboard snapshot (${TAIWAN_TIME} TST)"
+          git -c "http.https://github.com/.extraheader=AUTHORIZATION: basic ${AUTH_B64}" \
+            push origin "$TARGET_BRANCH"
+
+      - name: Upload ./SELF Pages artifact (same-repository Pages fallback)
+        if: ${{ vars.PAGES_TARGET_REPO == '' }}
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./SELF
+
+  deploy_same_repo:
+    if: ${{ vars.PAGES_TARGET_REPO == '' && needs.build_and_publish.result == 'success' }}
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build_and_publish
+    steps:
+      - name: Deploy ./SELF to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
