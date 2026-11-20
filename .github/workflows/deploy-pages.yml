@@ -7,10 +7,10 @@ on:
   schedule:
     # Taiwan Time (UTC+8) 06:15 -> 22:15 UTC (morning weather + astro + available stock close)
     - cron: '15 22 * * *'
-    # Taiwan Time (UTC+8) 15:00 -> 07:00 UTC (TWSE market close + 90d history fully settled + weather)
-    - cron: '0 7 * * *'
-    # Taiwan Time (UTC+8) 18:00 -> 10:00 UTC (evening weather + sunset/next-sunrise + stock re-verify)
-    - cron: '0 10 * * *'
+    # Taiwan Time (UTC+8) 15:07 -> 07:07 UTC (TWSE market close + 90d history fully settled + weather)
+    - cron: '7 7 * * *'
+    # Taiwan Time (UTC+8) 18:07 -> 10:07 UTC (evening weather + sunset/next-sunrise + stock re-verify)
+    - cron: '7 10 * * *'
   workflow_dispatch:
 
 permissions:
